@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>홈</title>
+</head>
+<body>
+<h1>메인 페이지</h1>
+
+<!-- 비디오 업로드 폼 -->
+<form id="uploadForm" enctype="multipart/form-data">
+    <input type="file" name="file" id="fileInput" accept="video/*">
+    <button type="button" onclick="uploadVideo()">비디오 업로드</button>
+</form>
+
+<!-- 결과 메시지 출력 -->
+<p id="resultMessage"></p>
+
+<!-- 업로드된 비디오 표시 -->
+<video id="uploadedVideo" width="600" controls style="display:none;">
+    <source id="videoSource" src="" type="video/mp4">
+    Your browser does not support the video tag.
+</video>
+
+<!-- JavaScript 함수 -->
+<script>
+    function uploadVideo() {
+        console.log("uploadVideo 함수 시작");
+        const form = document.getElementById('uploadForm');
+        const formData = new FormData(form);
+
+        // localStorage에서 JWT 토큰 가져오기
+        const token = localStorage.getItem('token');
+        console.log("사용하는 JWT 토큰:", token);
+
+        fetch('/api/videos/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            body: formData
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Upload failed: ' + response.statusText);
+                }
+                return response.text();
+            })
+            .then(data => {
+                console.log("응답 데이터:", data);
+                const resultMessageElement = document.getElementById('resultMessage');
+
+                if (data.includes('File uploaded successfully')) {
+                    resultMessageElement.textContent = '업로드 성공';
+                    const videoUrlIndex = data.indexOf('Access it at: ');
+                    if (videoUrlIndex !== -1) {
+                        const videoUrl = data.substring(videoUrlIndex + 'Access it at: '.length).trim();
+                        const videoElement = document.getElementById('uploadedVideo');
+                        const videoSource = document.getElementById('videoSource');
+                        videoSource.src = videoUrl;
+                        videoElement.style.display = 'block';
+                        videoElement.load();
+                    }
+                } else {
+                    resultMessageElement.textContent = '업로드 실패';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultMessage').textContent = '업로드 실패: ' + error;
+            });
+    }
+
+    // 페이지 로드 시 JWT 토큰을 localStorage에 저장
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            console.log('JWT 토큰을 localStorage에 저장:', token);
+            localStorage.setItem('token', token);  // 토큰을 localStorage에 저장
+        }
+    });
+</script>
+
+</body>
+</html>
